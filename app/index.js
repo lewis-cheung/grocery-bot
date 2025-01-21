@@ -51,7 +51,9 @@ export default class TelegramCommanderApp extends TelegramCommander {
       await mongoose.connect(fullUri, {
         dbName,
       })
-      logger.info(`Connected to database at ${fullUri}.`)
+      // mask password in log
+      const uriWithoutPassword = fullUri.replace(/\/(.+):(.+)@/, '/$1:****@')
+      logger.info(`Connected to database at ${uriWithoutPassword}.`)
     } catch (error) {
       logger.error('Failed to connect to database.', error)
       process.exit(1)
