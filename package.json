@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node index.js --require=suppress-experimental-warnings",
-    "pm2:start": "pm2 restart ecosystem.config.cjs --only telegram-commander-starter",
-    "pm2:dev": "pm2 restart ecosystem.config.cjs --only telegram-commander-starter-dev",
+    "pm2:start": "pm2 restart ecosystem.config.cjs --only grocery-bot",
+    "pm2:dev": "pm2 restart ecosystem.config.cjs --only grocery-bot-dev",
     "pm2:stop": "pm2 stop ecosystem.config.cjs",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
   },
