@@ -1,4 +1,4 @@
-appName: telegram-commander-starter
+appName: grocery-bot
 env: development
 logDir: ./logs
 
@@ -12,6 +12,6 @@ telegram:
 
 mongo:
   uri: mongodb://localhost:27017
-  dbName: telegram-commander-starter-dev
+  dbName: grocery-bot-dev
   user: db-user
   password: db-password
