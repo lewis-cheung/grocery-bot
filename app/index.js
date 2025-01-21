@@ -1,4 +1,4 @@
-import { TelegramCommander, escapeMarkdownV2 as e, Context } from 'telegram-commander'
+import { TelegramCommander, escapeMarkdownV2 as e } from 'telegram-commander'
 import mongoose from 'mongoose'
 
 import { User } from './models/index.js'

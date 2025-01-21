@@ -22,6 +22,7 @@
     "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
+    "@types/node-telegram-bot-api": "^0.61.7",
     "@types/dot-object": "^2.1.6",
     "@types/js-yaml": "^4.0.9",
     "jest": "^29.7.0"
