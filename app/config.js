@@ -14,16 +14,14 @@ export default {
   logDir: validateString(yamlObj, 'logDir', './logs'),
 
   telegram: {
-    token: validateString(yamlObj, 'telegram.token', ''),
+    token: validateString(yamlObj, 'telegram.token'),
     whitelistedChatIds: validateArray(yamlObj, 'telegram.whitelistedChatIds', undefined),
     notiChatIds: validateArray(yamlObj, 'telegram.notiChatIds', []),
   },
 
   mongo: {
-    uri: validateString(yamlObj, 'mongo.uri', 'mongodb://localhost:27017'),
+    fullUri: validateString(yamlObj, 'mongo.fullUri', undefined),
     dbName: validateString(yamlObj, 'mongo.dbName', 'dev-db'),
-    user: validateString(yamlObj, 'mongo.user', ''),
-    password: validateString(yamlObj, 'mongo.password', ''),
   },
 }
 
@@ -34,10 +32,10 @@ export default {
  * @param {T} defaultVal
  * @returns {T}
  */
-function applyDefaultVal(obj, dotPath, defaultVal) {
+function applyDefaultVal(obj, dotPath, defaultVal = null) {
   const val = dot.pick(dotPath, obj)
   if (val === undefined) {
-    if (defaultVal === undefined) {
+    if (defaultVal === null) {
       throw new Error(`config.yaml: ${dotPath} not found`)
     }
     console.warn(`config.yaml: ${dotPath} not found, using default value: ${defaultVal}`)

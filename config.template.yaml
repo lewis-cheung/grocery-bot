@@ -11,7 +11,5 @@ telegram:
     - 1234567890
 
 mongo:
-  uri: mongodb://localhost:27017
+  fullUri: mongodb+srv://user:pass@dev-cluster.abcde.mongodb.net
   dbName: grocery-bot-dev
-  user: db-user
-  password: db-password

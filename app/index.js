@@ -1,6 +1,7 @@
-import { TelegramCommander, escapeMarkdownV2 as e } from 'telegram-commander'
+import { TelegramCommander, escapeMarkdownV2 as e, Context } from 'telegram-commander'
 import mongoose from 'mongoose'
 
+import { User } from './models/index.js'
 import config from './config.js'
 import logger from './logger.js'
 
@@ -18,8 +19,16 @@ export default class TelegramCommanderApp extends TelegramCommander {
       logger,
       whitelistedChatIds: config.telegram.whitelistedChatIds,
     })
+
+    // Add user to context before handling command
+    this.beforeHandleCommandHooks.push(async (ctx) => {
+      ctx.user = await User.getUserByChatId(ctx.chatId, { createIfNotFound: true, updateLastCommandAt: true })
+    })
   }
 
+  /**
+   * Initialize commands
+   */
   async initCommands() {
     await this.addCommand({
       name: 'sample',
@@ -32,12 +41,15 @@ export default class TelegramCommanderApp extends TelegramCommander {
     await this.syncCommands()
   }
 
-  async initMongo(uri, dbName, user, password) {
+  /**
+   * Initialize MongoDB connection
+   * @param {string} fullUri - MongoDB full uri (e.g. mongodb+srv://user:pass@dev-cluster.abcde.mongodb.net)
+   * @param {string} dbName - MongoDB database name
+   */
+  async initMongo(fullUri, dbName) {
     try {
-      const fullUri = `${uri}/${dbName}`
       await mongoose.connect(fullUri, {
-        user,
-        pass: password
+        dbName,
       })
       logger.info(`Connected to database at ${fullUri}.`)
     } catch (error) {
@@ -46,11 +58,14 @@ export default class TelegramCommanderApp extends TelegramCommander {
     }
   }
 
+  /**
+   * Start the application
+   */
   async start() {
-    if (config.mongo?.uri !== undefined && config.mongo?.dbName !== undefined) {
-      await this.initMongo(config.mongo.uri, config.mongo.dbName)
+    if (config.mongo?.fullUri !== undefined) {
+      await this.initMongo(config.mongo.fullUri, config.mongo.dbName)
     } else {
-      logger.warn('Mongo uri/dbName is not set in config.yaml, skipping database connection. If this is intentional, remove initMongo() from index.js.')
+      logger.warn('mongo.fullUri is not set in config.yaml, skipping database connection. If this is intentional, remove initMongo() from index.js.')
     }
     await this.initCommands()
     await this.notify(e(`${config.appName} started.`))

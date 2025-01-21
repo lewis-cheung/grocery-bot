@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node index.js --require=suppress-experimental-warnings",
-    "pm2:start": "pm2 start ecosystem.config.cjs --only grocery-bot",
-    "pm2:dev": "pm2 start ecosystem.config.cjs --only grocery-bot-dev",
+    "pm2:start": "pm2 restart ecosystem.config.cjs --only telegram-commander-starter",
+    "pm2:dev": "pm2 restart ecosystem.config.cjs --only telegram-commander-starter-dev",
     "pm2:stop": "pm2 stop ecosystem.config.cjs",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
   },
@@ -17,7 +17,7 @@
     "dot-object": "^2.1.5",
     "js-yaml": "^4.1.0",
     "mongoose": "^8.9.5",
-    "telegram-commander": "github:lewislun/telegram-commander#v0.8.7",
+    "telegram-commander": "github:lewislun/telegram-commander#v1.0.0",
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0"
   },
