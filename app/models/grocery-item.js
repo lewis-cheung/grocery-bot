@@ -2,6 +2,7 @@ import mongoose from 'mongoose'
 
 import { escapeRegex } from '../helpers/index.js'
 
+/** @enum {string} */
 const GroceryItemUnit = {
   PIECE: 'piece',
   KG: 'kg',
@@ -15,7 +16,6 @@ const groceryItemSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
   name: { type: String, required: true },
   pendingPurchase: {
-    isPending: { type: Boolean, default: false },
     requestedAt: { type: Date, required: true, default: Date.now },
     quantity: { type: Number },
     unit: { type: String, enum: Object.values(GroceryItemUnit) },
@@ -51,7 +51,6 @@ class GroceryItem extends mongoose.model('GroceryItem', groceryItemSchema) {
    * @param {string} name - The name of the grocery item
    * @param {Object} opts - Options
    * @param {Object} opts.pendingPurchase - The pending purchase
-   * @param {boolean} opts.pendingPurchase.isPending - Whether the item is pending purchase
    * @param {number} opts.pendingPurchase.quantity - The quantity of the item requested
    * @param {string} opts.pendingPurchase.unit - The unit of the item requested
    * @returns {Promise<GroceryItem>} - A promise that resolves to the new grocery item

@@ -1,9 +1,10 @@
 import { TelegramCommander, escapeMarkdownV2 as e } from 'telegram-commander'
 import mongoose from 'mongoose'
 
-import { User } from './models/index.js'
+import { User, GroceryItem, GroceryItemUnit } from './models/index.js'
 import config from './config.js'
 import logger from './logger.js'
+import * as types from './types.js'
 
 export default class TelegramCommanderApp extends TelegramCommander {
 
@@ -31,11 +32,9 @@ export default class TelegramCommanderApp extends TelegramCommander {
    */
   async initCommands() {
     await this.addCommand({
-      name: 'sample',
-      description: 'Sample command',
-      handler: async (ctx) => {
-        await ctx.reply(`chatId: ${ctx.chatId}`)
-      }
+      name: 'add_to_list',
+      description: 'Add grocery item to list',
+      handler: this.handleAddToList.bind(this),
     })
 
     await this.syncCommands()
@@ -79,5 +78,45 @@ export default class TelegramCommanderApp extends TelegramCommander {
    */
   async notify(content) {
     await this.sendMessage(this.notiChatIds, content)
+  }
+
+  /**
+   * Handle add grocery item command
+   * @param {types.ContextWithUser} ctx - The context
+   */
+  async handleAddToList(ctx) {
+    // Prompt for name
+    // TODO: give some name suggestions
+    const name = await ctx.prompt(e('Grocery item to add:'))
+
+    // Prompt for quantity
+    const quantity = await ctx.prompt(e('Quantity:'), {
+      reply_markup: { inline_keyboard: [[{ text: 'Skip', callback_data: '0' }]] },
+      validator: (value) => !isNaN(Number(value)) && Number(value) >= -1,
+      errorMsg: 'Please enter a valid positive number or 0 to skip.',
+      promptTextOnDone: (value) => value === '0' ? 'Quantity not specified.' : `Quantity: ${value}`,
+    })
+    const quantityNum = Number(quantity)
+
+    // Prompt for unit if quantity is specified
+    /** @type {GroceryItemUnit} */
+    let unit = undefined
+    if (quantityNum > 0) {
+      unit = await ctx.prompt(e('Unit:'), {
+        reply_markup: {
+          inline_keyboard: [
+            Object.values(GroceryItemUnit).map((unit) => ({ text: unit, callback_data: unit })),
+          ],
+        },
+        validator: (value) => Object.values(GroceryItemUnit).includes(value),
+        errorMsg: 'Please enter a valid unit.',
+        promptTextOnDone: (value) => `Unit: ${value}`,
+      })
+    }
+
+    const groceryItem = await GroceryItem.create(ctx.user._id, name, {
+      pendingPurchase: quantityNum > 0 ? { quantity: quantityNum, unit } : undefined,
+    })
+    await ctx.reply(`Grocery item ${groceryItem.name} added.`)
   }
 }
