@@ -32,9 +32,9 @@ export default class TelegramCommanderApp extends TelegramCommander {
    */
   async initCommands() {
     await this.addCommand({
-      name: 'add_to_list',
+      name: 'add_item',
       description: 'Add grocery item to list',
-      handler: this.handleAddToList.bind(this),
+      handler: this.handleAddItem.bind(this),
     })
 
     await this.syncCommands()
@@ -84,7 +84,7 @@ export default class TelegramCommanderApp extends TelegramCommander {
    * Handle add grocery item command
    * @param {types.ContextWithUser} ctx - The context
    */
-  async handleAddToList(ctx) {
+  async handleAddItem(ctx) {
     // Prompt for name
     // TODO: give some name suggestions
     // TODO: already in list
