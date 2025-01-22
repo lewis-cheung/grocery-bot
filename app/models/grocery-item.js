@@ -21,9 +21,9 @@ const groceryItemSchema = new mongoose.Schema({
     unit: { type: String, enum: Object.values(GroceryItemUnit) },
   },
   purchaseRecords: [{
-    purchasedAt: { type: Date, required: true },
-    quantity: { type: Number, required: true },
-    unit: { type: String, required: true, enum: Object.values(GroceryItemUnit) },
+    purchasedAt: { type: Date },
+    quantity: { type: Number },
+    unit: { type: String, enum: Object.values(GroceryItemUnit) },
   }],
   // TODO: average price, highest price, lowest price
 }, {
@@ -34,15 +34,34 @@ groceryItemSchema.index({ name: 1, user: 1 }, { unique: true })
 class GroceryItem extends mongoose.model('GroceryItem', groceryItemSchema) {
 
   /**
-   * Search for grocery items by name
+   * Get for grocery items by name
    * @param {mongoose.Types.ObjectId} userId - The ID of the user
    * @param {string} name - The name of the grocery item
    * @returns {Promise<GroceryItem[]>} - A promise that resolves to an array of grocery items
    */
-  static async searchByName(userId, name) {
+  static async getSimilarByName(userId, name) {
     // TODO: use fuzzy search
     const regex = new RegExp(escapeRegex(name), 'i')
     return this.find({ user: userId, name: regex })
+  }
+
+  /**
+   * Add a pending purchase to a grocery item. Create a new grocery item if it doesn't exist.
+   * @param {mongoose.Types.ObjectId} userId - The ID of the user
+   * @param {string} name - The name of the grocery item
+   * @param {number} quantity - The quantity of the item requested
+   * @param {string} unit - The unit of the item requested
+   * @returns {Promise<GroceryItem>} - A promise that resolves to the grocery item
+   */
+  static async addPendingPurchase(userId, name, quantity = undefined, unit = undefined) {
+    let groceryItem = await this.findOne({ user: userId, name })
+    if (!groceryItem) {
+      groceryItem = await this.create(userId, name, { pendingPurchase: { quantity, unit } })
+    } else {
+      groceryItem.pendingPurchase = { quantity, unit }
+      await groceryItem.save()
+    }
+    return groceryItem
   }
 
   /**
@@ -56,10 +75,15 @@ class GroceryItem extends mongoose.model('GroceryItem', groceryItemSchema) {
    * @returns {Promise<GroceryItem>} - A promise that resolves to the new grocery item
    */
   static async create(userId, name, opts = {}) {
+    const pendingPurchase = opts?.pendingPurchase
+    if (pendingPurchase) {
+      pendingPurchase.requestedAt = Date.now()
+    }
+
     const groceryItem = new GroceryItem({
       user: userId,
       name,
-      pendingPurchase: opts?.pendingPurchase,
+      pendingPurchase,
       purchaseRecords: [],
     })
     await groceryItem.save()

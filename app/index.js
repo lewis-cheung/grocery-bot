@@ -87,16 +87,17 @@ export default class TelegramCommanderApp extends TelegramCommander {
   async handleAddToList(ctx) {
     // Prompt for name
     // TODO: give some name suggestions
+    // TODO: already in list
     const name = await ctx.prompt(e('Grocery item to add:'))
 
     // Prompt for quantity
-    const quantity = await ctx.prompt(e('Quantity:'), {
+    const quantity = await ctx.prompt(e('Quantity: (Enter number or skip)'), {
       reply_markup: { inline_keyboard: [[{ text: 'Skip', callback_data: '0' }]] },
       validator: (value) => !isNaN(Number(value)) && Number(value) >= -1,
       errorMsg: 'Please enter a valid positive number or 0 to skip.',
       promptTextOnDone: (value) => value === '0' ? 'Quantity not specified.' : `Quantity: ${value}`,
     })
-    const quantityNum = Number(quantity)
+    const quantityNum = quantity === '0' ? undefined : Number(quantity)
 
     // Prompt for unit if quantity is specified
     /** @type {GroceryItemUnit} */
@@ -109,14 +110,12 @@ export default class TelegramCommanderApp extends TelegramCommander {
           ],
         },
         validator: (value) => Object.values(GroceryItemUnit).includes(value),
-        errorMsg: 'Please enter a valid unit.',
+        errorMsg: e('Please enter a valid unit.'),
         promptTextOnDone: (value) => `Unit: ${value}`,
       })
     }
 
-    const groceryItem = await GroceryItem.create(ctx.user._id, name, {
-      pendingPurchase: quantityNum > 0 ? { quantity: quantityNum, unit } : undefined,
-    })
-    await ctx.reply(`Grocery item ${groceryItem.name} added.`)
+    const groceryItem = await GroceryItem.addPendingPurchase(ctx.user._id, name, quantityNum, unit)
+    await ctx.reply(e(`Grocery item ${groceryItem.name} added.`))
   }
 }
