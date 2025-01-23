@@ -34,13 +34,19 @@ export default class TelegramCommanderApp extends TelegramCommander {
     await this.addCommand({
       name: 'add_item',
       description: 'Add grocery item to list',
-      handler: this.handleAddItem.bind(this),
+      handler: this.handleAddItemCmd.bind(this),
     })
 
     await this.addCommand({
       name: 'show_list',
       description: 'Show grocery list',
-      handler: this.handleShowList.bind(this),
+      handler: this.handleShowListCmd.bind(this),
+    })
+
+    await this.addCommand({
+      name: 'record_purchase',
+      description: 'Record a purchase',
+      handler: this.handleRecordPurchaseCmd.bind(this),
     })
 
     await this.syncCommands()
@@ -90,7 +96,7 @@ export default class TelegramCommanderApp extends TelegramCommander {
    * Handle add grocery item command
    * @param {types.ContextWithUser} ctx - The context
    */
-  async handleAddItem(ctx) {
+  async handleAddItemCmd(ctx) {
     // Prompt for name
     // TODO: give some name suggestions
     // TODO: already in list
@@ -114,7 +120,8 @@ export default class TelegramCommanderApp extends TelegramCommander {
       unit = await ctx.prompt(e('Unit:'), {
         reply_markup: {
           inline_keyboard: [
-            Object.values(GroceryItemUnit).map((unit) => ({ text: unit, callback_data: unit })),
+            Object.values(GroceryItemUnit).splice(0, 4).map((unit) => ({ text: unit, callback_data: unit })),
+            Object.values(GroceryItemUnit).splice(4).map((unit) => ({ text: unit, callback_data: unit })),
           ],
         },
         validator: (value) => Object.values(GroceryItemUnit).includes(value),
@@ -131,18 +138,84 @@ export default class TelegramCommanderApp extends TelegramCommander {
    * Handle show list command
    * @param {types.ContextWithUser} ctx - The context
    */
-  async handleShowList(ctx) {
+  async handleShowListCmd(ctx) {
     const groceryItems = await GroceryItem.getAllWithPendingPurchase(ctx.user._id)
     const listMsg = groceryItems.map((item) => {
       let msg = `*${item.name}*`
       if (item.pendingPurchase?.quantity) {
         const quantity = item.pendingPurchase.quantity
         const unit = item.pendingPurchase.unit
-        msg += e(` - ${quantity} ${unit}`)
+        msg += e(` - ${quantity} ${unit}(s)`)
       }
       return msg
     }).join('\n')
     await ctx.reply([ e(`Grocery list:`), listMsg ])
   }
+
+  async handleRecordPurchaseCmd(ctx) {
+    const pendingPurchaseItems = await GroceryItem.getAllWithPendingPurchase(ctx.user._id)
+    const itemName = await ctx.prompt(e('Select or enter a grocery item name:'), {
+      reply_markup: {
+        inline_keyboard: pendingPurchaseItems.map((item) => ([{ text: item.name, callback_data: item.name }])),
+      },
+      promptTextOnDone: (value) => `Grocery item: ${value}`,
+    })
+
+    // find item by name
+    let groceryItem = undefined
+    const searchResults = await GroceryItem.getSimilarByName(ctx.user._id, itemName)
+    if (searchResults.length === 1) {
+      groceryItem = searchResults[0]
+    } else if (searchResults.length > 1) {
+      // prompt for confirmation to select the correct item
+      let finalItemName = await ctx.prompt(e('Are you referring to one of the following items?'), {
+        reply_markup: {
+          inline_keyboard: [
+            ...searchResults.map((item) => ([{ text: item.name, callback_data: item.name }])),
+            [{ text: 'No, this is a new item', callback_data: itemName }],
+          ],
+        },
+      })
+      groceryItem = searchResults.find((item) => item.name === finalItemName)
+    }
+    if (!groceryItem) {
+      groceryItem = await GroceryItem.create(ctx.user._id, itemName)
+      await ctx.reply(e(`New grocery item ${groceryItem.name} created.`))
+    }
+
+    // prompt for quantity
+    const quantity = await ctx.prompt(e('Quantity:'), {
+      validator: (value) => !isNaN(Number(value)) && Number(value) >= -1,
+      errorMsg: 'Please enter a valid positive number or 0 to skip.',
+      promptTextOnDone: (value) => `Quantity: ${value}`,
+    })
+    const quantityNum = Number(quantity)
+
+    // prompt for unit
+    const unit = await ctx.prompt(e('Select unit:'), {
+      reply_markup: {
+        inline_keyboard: [
+          Object.values(GroceryItemUnit).splice(0, 4).map((unit) => ({ text: unit, callback_data: unit })),
+          Object.values(GroceryItemUnit).splice(4).map((unit) => ({ text: unit, callback_data: unit })),
+        ],
+      },
+      validator: (value) => Object.values(GroceryItemUnit).includes(value),
+      errorMsg: 'Please enter a valid unit.',
+      promptTextOnDone: (value) => `Unit: ${value}`,
+    })
+
+    // prompt for price
+    const price = await ctx.prompt(e('Enter total price:'), {
+      validator: (value) => !isNaN(Number(value)) && Number(value) >= 0,
+      errorMsg: 'Please enter a valid positive number.',
+      promptTextOnDone: (value) => `Total Price: ${value}`,
+    })
+    const priceNum = Number(price)
+    
+    await groceryItem.recordPurchase(quantityNum, unit, priceNum)
+    const unitPrice = priceNum / quantityNum
+    await ctx.reply(e(`Purchase of ${quantityNum} ${unit}(s) of ${groceryItem.name} at $${priceNum} ($${unitPrice.toFixed(2)}/${unit}) recorded.`))
+  }
 }
+
 

@@ -4,25 +4,27 @@ import { escapeRegex } from '../helpers/index.js'
 
 /** @enum {string} */
 const GroceryItemUnit = {
-  PIECES: 'pieces',
+  PIECE: 'piece',
   KG: 'kg',
   G: 'g',
+  LB: 'lb',
   ML: 'ml',
   L: 'l',
-  PACKS: 'packs',
+  PACK: 'pack',
 }
 
 const groceryItemSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
   name: { type: String, required: true },
   pendingPurchase: {
-    requestedAt: { type: Date, required: true, default: Date.now },
+    requestedAt: { type: Date },
     quantity: { type: Number },
     unit: { type: String, enum: Object.values(GroceryItemUnit) },
   },
   purchaseRecords: [{
     purchasedAt: { type: Date },
     quantity: { type: Number },
+    price: { type: Number },
     unit: { type: String, enum: Object.values(GroceryItemUnit) },
   }],
   // TODO: average price, highest price, lowest price
@@ -37,9 +39,14 @@ class GroceryItem extends mongoose.model('GroceryItem', groceryItemSchema) {
    * Get for grocery items by name
    * @param {mongoose.Types.ObjectId} userId - The ID of the user
    * @param {string} name - The name of the grocery item
-   * @returns {Promise<GroceryItem[]>} - A promise that resolves to an array of grocery items
+   * @returns {Promise<GroceryItem[]>} - A promise that resolves to an array of grocery items. Only one item is returned if exact match is found.
    */
   static async getSimilarByName(userId, name) {
+    const exactMatch = await this.findOne({ user: userId, name })
+    if (exactMatch) {
+      return [exactMatch]
+    }
+
     // TODO: use fuzzy search
     const regex = new RegExp(escapeRegex(name), 'i')
     return this.find({ user: userId, name: regex })
@@ -100,6 +107,18 @@ class GroceryItem extends mongoose.model('GroceryItem', groceryItemSchema) {
       user: userId,
       'pendingPurchase': { $exists: true, $ne: undefined },
     })
+  }
+
+  /**
+   * Record a purchase for a grocery item
+   * @param {number} quantity - The quantity of the item purchased
+   * @param {string} unit - The unit of the item purchased
+   * @param {number} price - The price of the item purchased
+   */
+  async recordPurchase(quantity, unit, price) {
+    this.purchaseRecords.push({ quantity, unit, price, purchasedAt: Date.now() })
+    this.pendingPurchase = undefined
+    await this.save()
   }
 }
 
