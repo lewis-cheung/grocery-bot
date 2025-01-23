@@ -4,12 +4,12 @@ import { escapeRegex } from '../helpers/index.js'
 
 /** @enum {string} */
 const GroceryItemUnit = {
-  PIECE: 'piece',
+  PIECES: 'pieces',
   KG: 'kg',
   G: 'g',
   ML: 'ml',
   L: 'l',
-  PACK: 'pack',
+  PACKS: 'packs',
 }
 
 const groceryItemSchema = new mongoose.Schema({
@@ -88,6 +88,18 @@ class GroceryItem extends mongoose.model('GroceryItem', groceryItemSchema) {
     })
     await groceryItem.save()
     return groceryItem
+  }
+
+  /**
+   * Get all grocery items with a pending purchase
+   * @param {mongoose.Types.ObjectId} userId - The ID of the user
+   * @returns {Promise<GroceryItem[]>} - A promise that resolves to an array of grocery items
+   */
+  static async getAllWithPendingPurchase(userId) {
+    return this.find({
+      user: userId,
+      'pendingPurchase': { $exists: true, $ne: undefined },
+    })
   }
 }
 

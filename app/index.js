@@ -37,6 +37,12 @@ export default class TelegramCommanderApp extends TelegramCommander {
       handler: this.handleAddItem.bind(this),
     })
 
+    await this.addCommand({
+      name: 'show_list',
+      description: 'Show grocery list',
+      handler: this.handleShowList.bind(this),
+    })
+
     await this.syncCommands()
   }
 
@@ -88,7 +94,9 @@ export default class TelegramCommanderApp extends TelegramCommander {
     // Prompt for name
     // TODO: give some name suggestions
     // TODO: already in list
-    const name = await ctx.prompt(e('Grocery item to add:'))
+    const name = await ctx.prompt(e('Select or enter a grocery item to add:'), {
+      promptTextOnDone: (value) => `Grocery item: ${value}`,
+    })
 
     // Prompt for quantity
     const quantity = await ctx.prompt(e('Quantity: (Enter number or skip)'), {
@@ -118,4 +126,23 @@ export default class TelegramCommanderApp extends TelegramCommander {
     const groceryItem = await GroceryItem.addPendingPurchase(ctx.user._id, name, quantityNum, unit)
     await ctx.reply(e(`Grocery item ${groceryItem.name} added.`))
   }
+
+  /**
+   * Handle show list command
+   * @param {types.ContextWithUser} ctx - The context
+   */
+  async handleShowList(ctx) {
+    const groceryItems = await GroceryItem.getAllWithPendingPurchase(ctx.user._id)
+    const listMsg = groceryItems.map((item) => {
+      let msg = `*${item.name}*`
+      if (item.pendingPurchase?.quantity) {
+        const quantity = item.pendingPurchase.quantity
+        const unit = item.pendingPurchase.unit
+        msg += e(` - ${quantity} ${unit}`)
+      }
+      return msg
+    }).join('\n')
+    await ctx.reply([ e(`Grocery list:`), listMsg ])
+  }
 }
+
