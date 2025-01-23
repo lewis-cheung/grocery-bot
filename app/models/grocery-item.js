@@ -23,7 +23,7 @@ const groceryItemSchema = new mongoose.Schema({
     quantity: { type: Number },
     unit: { type: String, enum: Object.values(GroceryItemUnit) },
   },
-  purchaseRecords: [{
+  purchases: [{
     purchasedAt: { type: Date },
     quantity: { type: Number },
     price: { type: Number },
@@ -93,7 +93,7 @@ class GroceryItem extends mongoose.model('GroceryItem', groceryItemSchema) {
       user: userId,
       name,
       pendingPurchase,
-      purchaseRecords: [],
+      purchases: [],
     })
     await groceryItem.save()
     return groceryItem
@@ -118,7 +118,7 @@ class GroceryItem extends mongoose.model('GroceryItem', groceryItemSchema) {
    * @param {number} price - The price of the item purchased
    */
   async recordPurchase(quantity, unit, price) {
-    this.purchaseRecords.push({ quantity, unit, price, purchasedAt: Date.now() })
+    this.purchases.push({ quantity, unit, price, purchasedAt: Date.now() })
     this.pendingPurchase = undefined
     await this.save()
   }

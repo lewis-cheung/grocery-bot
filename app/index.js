@@ -147,6 +147,12 @@ export default class TelegramCommanderApp extends TelegramCommander {
         const unit = item.pendingPurchase.unit
         msg += e(` - ${quantity} ${unit}(s)`)
       }
+      if (item.purchases.length > 0) {
+        // TODO: handle multiple units
+        const totalPrice = item.purchases.reduce((acc, purchase) => acc + purchase.price, 0)
+        const avgPrice = totalPrice / item.purchases.length
+        msg += e(` (${avgPrice.toFixed(2)}/${item.purchases[0].unit})`)
+      }
       return msg
     }).join('\n')
     await ctx.reply([ e(`Grocery list:`), listMsg ])
