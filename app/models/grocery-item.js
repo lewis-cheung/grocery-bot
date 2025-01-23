@@ -67,7 +67,7 @@ class GroceryItem extends mongoose.model('GroceryItem', groceryItemSchema) {
     if (!groceryItem) {
       groceryItem = await this.create(userId, name, { pendingPurchase: { quantity, unit } })
     } else {
-      groceryItem.pendingPurchase = { quantity, unit }
+      groceryItem.pendingPurchase = { quantity, unit, requestedAt: Date.now() }
       await groceryItem.save()
     }
     return groceryItem

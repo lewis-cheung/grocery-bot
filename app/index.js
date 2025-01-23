@@ -151,13 +151,17 @@ export default class TelegramCommanderApp extends TelegramCommander {
         // TODO: handle multiple units
         const totalPrice = item.purchases.reduce((acc, purchase) => acc + purchase.price, 0)
         const avgPrice = totalPrice / item.purchases.length
-        msg += e(` (${avgPrice.toFixed(2)}/${item.purchases[0].unit})`)
+        msg += e(` (avg: $${avgPrice.toFixed(2)}/${item.purchases[0].unit})`)
       }
       return msg
     }).join('\n')
     await ctx.reply([ e(`Grocery list:`), listMsg ])
   }
 
+  /**
+   * Handle record purchase command
+   * @param {types.ContextWithUser} ctx - The context
+   */
   async handleRecordPurchaseCmd(ctx) {
     const pendingPurchaseItems = await GroceryItem.getAllWithPendingPurchase(ctx.user._id)
     const itemName = await ctx.prompt(e('Select or enter a grocery item name:'), {
