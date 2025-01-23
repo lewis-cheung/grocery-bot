@@ -4,13 +4,15 @@ import { escapeRegex } from '../helpers/index.js'
 
 /** @enum {string} */
 const GroceryItemUnit = {
-  PIECE: 'piece',
   KG: 'kg',
   G: 'g',
   LB: 'lb',
   ML: 'ml',
   L: 'l',
+  PIECE: 'piece',
   PACK: 'pack',
+  CAN: 'can',
+  BOTTLE: 'bottle',
 }
 
 const groceryItemSchema = new mongoose.Schema({

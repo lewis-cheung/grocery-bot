@@ -120,8 +120,8 @@ export default class TelegramCommanderApp extends TelegramCommander {
       unit = await ctx.prompt(e('Unit:'), {
         reply_markup: {
           inline_keyboard: [
-            Object.values(GroceryItemUnit).splice(0, 4).map((unit) => ({ text: unit, callback_data: unit })),
-            Object.values(GroceryItemUnit).splice(4).map((unit) => ({ text: unit, callback_data: unit })),
+            Object.values(GroceryItemUnit).splice(0, 5).map((unit) => ({ text: unit, callback_data: unit })),
+            Object.values(GroceryItemUnit).splice(5).map((unit) => ({ text: unit, callback_data: unit })),
           ],
         },
         validator: (value) => Object.values(GroceryItemUnit).includes(value),
@@ -184,6 +184,7 @@ export default class TelegramCommanderApp extends TelegramCommander {
     }
 
     // prompt for quantity
+    // TODO: check against pending purchase quantity
     const quantity = await ctx.prompt(e('Quantity:'), {
       validator: (value) => !isNaN(Number(value)) && Number(value) >= -1,
       errorMsg: 'Please enter a valid positive number or 0 to skip.',
@@ -195,8 +196,8 @@ export default class TelegramCommanderApp extends TelegramCommander {
     const unit = await ctx.prompt(e('Select unit:'), {
       reply_markup: {
         inline_keyboard: [
-          Object.values(GroceryItemUnit).splice(0, 4).map((unit) => ({ text: unit, callback_data: unit })),
-          Object.values(GroceryItemUnit).splice(4).map((unit) => ({ text: unit, callback_data: unit })),
+          Object.values(GroceryItemUnit).splice(0, 5).map((unit) => ({ text: unit, callback_data: unit })),
+          Object.values(GroceryItemUnit).splice(5).map((unit) => ({ text: unit, callback_data: unit })),
         ],
       },
       validator: (value) => Object.values(GroceryItemUnit).includes(value),
