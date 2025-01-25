@@ -2,7 +2,7 @@ import { TelegramCommander, escapeMarkdownV2 as e } from 'telegram-commander'
 import mongoose from 'mongoose'
 
 import { User, GroceryItem, GroceryItemUnit } from './models/index.js'
-import config from './config.js'
+import config from '../config.js'
 import logger from './logger.js'
 import * as types from './types.js'
 

@@ -1,7 +1,7 @@
 import winston from 'winston'
 import DailyRotateFile from 'winston-daily-rotate-file'
 
-import config from './config.js'
+import config from '../config.js'
 
 const { format, transports } = winston
 

@@ -2,7 +2,7 @@ import fs from 'fs'
 import yaml from 'js-yaml'
 import dot from 'dot-object'
 
-import { Env } from './types.js'
+import { Env } from './app/types.js'
 
 // load the configs from the config file
 const configPath = './config.yaml'
