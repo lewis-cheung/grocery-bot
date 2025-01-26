@@ -13,6 +13,7 @@ A framework for building Telegram bots with Telegram Commander (https://github.c
   - `app/testable.js`
   - `app/testable.test.js`
 - remove sample command in `app/index.js`
+- remove sample migration `migrations/20250125220301-sample-migration.js`
 ## Installation and Usage
 1. Install dependencies
 ```bash
