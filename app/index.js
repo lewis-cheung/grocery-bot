@@ -100,7 +100,7 @@ export default class TelegramCommanderApp extends TelegramCommander {
         const chunk = suggestedItems.slice(i, i + keyboardColumnSize)
         keyboardRows.push(chunk.map((item) => ({ text: item.name, callback_data: item.name })))
     }
-    const inputName = await ctx.prompt(e('Select or enter a grocery item to add:'), {
+    const inputName = await ctx.prompt(e('Select or enter a grocery item:'), {
       promptTextOnDone: (value) => `Grocery item: ${value}`,
       reply_markup: {
         inline_keyboard: keyboardRows,
@@ -157,7 +157,7 @@ export default class TelegramCommanderApp extends TelegramCommander {
     }
 
     // Prompt for quantity
-    const quantity = await ctx.prompt(e('Quantity: (Enter number or skip)'), {
+    const quantity = await ctx.prompt(e(`Quantity (${groceryItem.unit}):`), {
       reply_markup: { inline_keyboard: [[{ text: 'Skip', callback_data: '0' }]] },
       validator: (value) => !isNaN(Number(value)) && Number(value) >= -1,
       errorMsg: 'Please enter a valid positive number or 0 to skip.',
@@ -199,7 +199,7 @@ export default class TelegramCommanderApp extends TelegramCommander {
     const quantity = await ctx.prompt(e('Quantity:'), {
       validator: (value) => !isNaN(Number(value)) && Number(value) >= -1,
       errorMsg: 'Please enter a valid positive number or 0 to skip.',
-      promptTextOnDone: (value) => `Quantity: ${value}`,
+      promptTextOnDone: (value) => `Quantity (${groceryItem.unit}): ${value}`,
     })
     const quantityNum = Number(quantity)
 
