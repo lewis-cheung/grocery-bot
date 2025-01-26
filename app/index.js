@@ -184,6 +184,9 @@ export default class TelegramCommanderApp extends TelegramCommander {
     const groceryItems = await GroceryItem.getAllWithPendingPurchase(ctx.user._id)
     const listMsg = groceryItems.map((item) => {
       let msg = `*${item.name}*`
+      if (item.pendingPurchase.quantity !== undefined) {
+        msg += e(` - ${item.pendingPurchase.quantity}${item.displayUnit}`)
+      }
       if (item.purchases.length > 0) {
         const { avgPrice, denominator } = item.getPriceSummary()
         msg += e(` (avg: $${avgPrice.toFixed(2)}/${denominator}${item.displayUnit})`)
@@ -203,10 +206,10 @@ export default class TelegramCommanderApp extends TelegramCommander {
 
     // prompt for quantity
     // TODO: check against pending purchase quantity
-    const quantity = await ctx.prompt(e('Quantity:'), {
+    const quantity = await ctx.prompt(e(`Quantity (${groceryItem.displayUnit}): `), {
       validator: (value) => !isNaN(Number(value)) && Number(value) >= -1,
       errorMsg: 'Please enter a valid positive number or 0 to skip.',
-      promptTextOnDone: (value) => `Quantity (${groceryItem.unit}): ${value}`,
+      promptTextOnDone: (value) => `Quantity (${groceryItem.displayUnit}): ${value}`,
     })
     const quantityNum = Number(quantity)
 

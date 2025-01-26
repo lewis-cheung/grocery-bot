@@ -37,11 +37,11 @@ const displayUnitByUnit = {
   [GroceryItemUnit.LB]: 'lb',
   [GroceryItemUnit.ML]: 'ml',
   [GroceryItemUnit.L]: 'L',
-  [GroceryItemUnit.PIECE]: 'piece(s)',
-  [GroceryItemUnit.PACK]: 'pack(s)',
-  [GroceryItemUnit.CAN]: 'can(s)',
-  [GroceryItemUnit.BOTTLE]: 'bottle(s)',
-  [GroceryItemUnit.USE]: 'use(s)',
+  [GroceryItemUnit.PIECE]: ' piece(s)',
+  [GroceryItemUnit.PACK]: ' pack(s)',
+  [GroceryItemUnit.CAN]: ' can(s)',
+  [GroceryItemUnit.BOTTLE]: ' bottle(s)',
+  [GroceryItemUnit.USE]: ' use(s)',
 }
 
 /**
