@@ -2,6 +2,12 @@ import mongoose from 'mongoose'
 
 import { escapeRegex } from '../helpers/index.js'
 
+/**
+ * @typedef {object} PriceSummary
+ * @property {number} avgPrice - The average price
+ * @property {number} denominator - The denominator
+ */
+
 /** @enum {string} */
 const GroceryItemUnit = {
   KG: 'kg',
@@ -13,6 +19,22 @@ const GroceryItemUnit = {
   PACK: 'pack',
   CAN: 'can',
   BOTTLE: 'bottle',
+}
+
+/**
+ * Display text of units
+ * @type {Record<GroceryItemUnit, string>}
+ */
+const displayUnitByUnit = {
+  [GroceryItemUnit.KG]: 'kg',
+  [GroceryItemUnit.G]: 'g',
+  [GroceryItemUnit.LB]: 'lb',
+  [GroceryItemUnit.ML]: 'ml',
+  [GroceryItemUnit.L]: 'L',
+  [GroceryItemUnit.PIECE]: 'piece(s)',
+  [GroceryItemUnit.PACK]: 'pack(s)',
+  [GroceryItemUnit.CAN]: 'can(s)',
+  [GroceryItemUnit.BOTTLE]: 'bottle(s)',
 }
 
 /**
@@ -142,9 +164,13 @@ class GroceryItem extends mongoose.model('GroceryItem', groceryItemSchema) {
     await this.save()
   }
 
+  get displayUnit() {
+    return displayUnitByUnit[this.unit]
+  }
+
   /**
    * Get the price summary of the grocery item
-   * @returns {{avgPrice: number, denominator: number}} - The price summary
+   * @returns {PriceSummary} - The price summary
    */
   getPriceSummary() {
     const totalPrice = this.purchases.reduce((acc, purchase) => acc + purchase.price, 0)
@@ -167,4 +193,5 @@ export {
   GroceryItem,
   GroceryItemUnit,
   avgDenominatorByUnit,
+  displayUnitByUnit,
 }

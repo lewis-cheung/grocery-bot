@@ -1,7 +1,7 @@
 import { TelegramCommander, escapeMarkdownV2 as e } from 'telegram-commander'
 import mongoose from 'mongoose'
 
-import { User, GroceryItem, GroceryItemUnit } from './models/index.js'
+import { User, GroceryItem, GroceryItemUnit, displayUnitByUnit } from './models/index.js'
 import config from '../config.js'
 import logger from './logger.js'
 import * as types from './types.js'
@@ -129,13 +129,13 @@ export default class TelegramCommanderApp extends TelegramCommander {
       const unit = await ctx.prompt(e('Unit for this item:'), {
         reply_markup: {
           inline_keyboard: [
-            Object.values(GroceryItemUnit).splice(0, 5).map((unit) => ({ text: unit, callback_data: unit })),
-            Object.values(GroceryItemUnit).splice(5).map((unit) => ({ text: unit, callback_data: unit })),
+            Object.values(GroceryItemUnit).splice(0, 5).map((unit) => ({ text: displayUnitByUnit[unit], callback_data: unit })),
+            Object.values(GroceryItemUnit).splice(5).map((unit) => ({ text: displayUnitByUnit[unit], callback_data: unit })),
           ],
         },
         validator: (value) => Object.values(GroceryItemUnit).includes(value),
         errorMsg: e('Please enter a valid unit.'),
-        promptTextOnDone: (value) => `Unit for this item: ${value}`,
+        promptTextOnDone: (value) => `Unit for this item: ${displayUnitByUnit[value]}`,
       })
 
       groceryItem = await GroceryItem.create(ctx.user._id, inputName, unit)
@@ -179,7 +179,7 @@ export default class TelegramCommanderApp extends TelegramCommander {
       let msg = `*${item.name}*`
       if (item.purchases.length > 0) {
         const { avgPrice, denominator } = item.getPriceSummary()
-        msg += e(` (avg: $${avgPrice.toFixed(2)}/${denominator}${item.unit})`)
+        msg += e(` (avg: $${avgPrice.toFixed(2)}/${denominator}${item.displayUnit})`)
       }
       return msg
     }).join('\n')
@@ -213,7 +213,7 @@ export default class TelegramCommanderApp extends TelegramCommander {
     
     await groceryItem.recordPurchase(quantityNum, priceNum)
     const { avgPrice, denominator } = GroceryItem.calculateAvgPrice(priceNum, quantityNum, groceryItem.unit)
-    await ctx.reply(e(`Purchase of ${quantityNum} ${groceryItem.unit}(s) of ${groceryItem.name} at $${priceNum} ($${avgPrice.toFixed(2)}/${denominator}${groceryItem.unit}) recorded.`))
+    await ctx.reply(e(`Purchase of ${quantityNum} ${groceryItem.displayUnit} of ${groceryItem.name} at $${priceNum} ($${avgPrice.toFixed(2)}/${denominator}${groceryItem.displayUnit}) recorded.`))
   }
 }
 
