@@ -95,38 +95,45 @@ export default class TelegramCommanderApp extends TelegramCommander {
   async promptGroceryItem(ctx, suggestedItems = []) {
     // prompt for name
     const keyboardColumnSize = 2
-    const keyboardRows = []
+    const suggestionRows = []
     for (let i = 0; i < suggestedItems.length; i += keyboardColumnSize) {
         const chunk = suggestedItems.slice(i, i + keyboardColumnSize)
-        keyboardRows.push(chunk.map((item) => ({ text: item.name, callback_data: item.name })))
+        suggestionRows.push(chunk.map((item) => ({ text: item.name, callback_data: item.name })))
     }
     const inputName = await ctx.prompt(e('Select or enter a grocery item:'), {
       promptTextOnDone: (value) => `Grocery item: ${value}`,
       reply_markup: {
-        inline_keyboard: keyboardRows,
+        inline_keyboard: suggestionRows,
       },
     })
 
     // find item by name
     let groceryItem = undefined
-    const searchResults = await GroceryItem.getSimilarByName(ctx.user._id, inputName)
-    if (searchResults.length === 1) {
-      groceryItem = searchResults[0]
-    } else if (searchResults.length > 1) {
+    const searchResult = await GroceryItem.searchByName(ctx.user._id, inputName)
+    console.log(searchResult)
+    if (searchResult.isExactMatch) {
+      groceryItem = searchResult.items[0]
+    } else if (searchResult.items.length > 0) {
       // prompt for confirmation to select the correct item
+      const suggestionRows = []
+      for (let i = 0; i < searchResult.items.length; i += keyboardColumnSize) {
+        const chunk = searchResult.items.slice(i, i + keyboardColumnSize)
+        suggestionRows.push(chunk.map((item) => ({ text: item.name, callback_data: item.name })))
+      }
       let finalItemName = await ctx.prompt(e('Are you referring to one of the following items?'), {
         reply_markup: {
           inline_keyboard: [
-            ...searchResults.map((item) => ([{ text: item.name, callback_data: item.name }])),
+            ...suggestionRows,
             [{ text: 'No, this is a new item', callback_data: inputName }],
           ],
         },
+        promptTextOnDone: (value) => `Selected item: ${value}`,
       })
-      groceryItem = searchResults.find((item) => item.name === finalItemName)
+      groceryItem = searchResult.items.find((item) => item.name === finalItemName)
     }
     if (!groceryItem) {
       // item does not exist, prompt for unit and create new item
-      const unit = await ctx.prompt(e('Unit for this item:'), {
+      const unit = await ctx.prompt(e('Unit for this new item:'), {
         reply_markup: {
           inline_keyboard: [
             Object.values(GroceryItemUnit).splice(0, 5).map((unit) => ({ text: displayUnitByUnit[unit], callback_data: unit })),
@@ -135,7 +142,7 @@ export default class TelegramCommanderApp extends TelegramCommander {
         },
         validator: (value) => Object.values(GroceryItemUnit).includes(value),
         errorMsg: e('Please enter a valid unit.'),
-        promptTextOnDone: (value) => `Unit for this item: ${displayUnitByUnit[value]}`,
+        promptTextOnDone: (value) => `Unit for this new item: ${displayUnitByUnit[value]}`,
       })
 
       groceryItem = await GroceryItem.create(ctx.user._id, inputName, unit)

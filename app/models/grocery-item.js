@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import Fuse from 'fuse.js'
 
 import { escapeRegex } from '../helpers/index.js'
 
@@ -6,6 +7,10 @@ import { escapeRegex } from '../helpers/index.js'
  * @typedef {object} PriceSummary
  * @property {number} avgPrice - The average price
  * @property {number} denominator - The denominator
+ * 
+ * @typedef {object} GroceryItemSearchResult
+ * @property {GroceryItem[]} items - The grocery items
+ * @property {boolean} isExactMatch - Whether the item is an exact match
  */
 
 /** @enum {string} */
@@ -66,7 +71,6 @@ const groceryItemSchema = new mongoose.Schema({
     quantity: { type: Number },
     price: { type: Number },
   }],
-  // TODO: average price, highest price, lowest price
 }, {
   timestamps: true,
 })
@@ -78,17 +82,38 @@ class GroceryItem extends mongoose.model('GroceryItem', groceryItemSchema) {
    * Get for grocery items by name
    * @param {mongoose.Types.ObjectId} userId - The ID of the user
    * @param {string} name - The name of the grocery item
-   * @returns {Promise<GroceryItem[]>} - A promise that resolves to an array of grocery items. Only one item is returned if exact match is found.
+   * @returns {Promise<GroceryItemSearchResult>} - A promise that resolves to an array of grocery items. Only one item is returned if exact match is found.
    */
-  static async getSimilarByName(userId, name) {
-    const exactMatch = await this.findOne({ user: userId, name })
-    if (exactMatch) {
-      return [exactMatch]
+  static async searchByName(userId, name) {
+    // check if exact match exists (case insensitive)
+    const caseInsensitiveRegex = new RegExp(`^${escapeRegex(name)}$`, 'i')
+    const exactMatches = await this.find({ user: userId, name: caseInsensitiveRegex })
+    if (exactMatches.length === 1) {
+      return {
+        items: exactMatches,
+        isExactMatch: true,
+      }
+    } else if (exactMatches.length > 1) {
+      return {
+        items: exactMatches,
+        isExactMatch: false,
+      }
     }
 
-    // TODO: use fuzzy search
-    const regex = new RegExp(escapeRegex(name), 'i')
-    return this.find({ user: userId, name: regex })
+    // fuzzy search
+    const allItems = await this.find({ user: userId }).limit(1000)
+    const fuse = new Fuse(allItems, {
+      keys: ['name'],
+      threshold: 0.5,
+      ignoreLocation: true,
+      isCaseSensitive: false,
+      shouldSort: true,
+    })
+    const searchResults = fuse.search(name).slice(0, 10)
+    return {
+      items: searchResults.map((result) => result.item),
+      isExactMatch: false,
+    }
   }
 
   /**
@@ -164,6 +189,10 @@ class GroceryItem extends mongoose.model('GroceryItem', groceryItemSchema) {
     await this.save()
   }
 
+  /**
+   * Get the display unit of the grocery item
+   * @returns {string} - The display unit
+   */
   get displayUnit() {
     return displayUnitByUnit[this.unit]
   }
