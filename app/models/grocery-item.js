@@ -24,6 +24,7 @@ const GroceryItemUnit = {
   PACK: 'pack',
   CAN: 'can',
   BOTTLE: 'bottle',
+  USE: 'use',
 }
 
 /**
@@ -40,6 +41,7 @@ const displayUnitByUnit = {
   [GroceryItemUnit.PACK]: 'pack(s)',
   [GroceryItemUnit.CAN]: 'can(s)',
   [GroceryItemUnit.BOTTLE]: 'bottle(s)',
+  [GroceryItemUnit.USE]: 'use(s)',
 }
 
 /**
@@ -56,6 +58,7 @@ const avgDenominatorByUnit = {
   [GroceryItemUnit.PACK]: 1,
   [GroceryItemUnit.CAN]: 1,
   [GroceryItemUnit.BOTTLE]: 1,
+  [GroceryItemUnit.USE]: 1,
 }
 
 const groceryItemSchema = new mongoose.Schema({
