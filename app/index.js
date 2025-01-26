@@ -92,17 +92,61 @@ export default class TelegramCommanderApp extends TelegramCommander {
     await this.sendMessage(this.notiChatIds, content)
   }
 
+  async promptGroceryItem(ctx) {
+    // prompt for name
+    const inputName = await ctx.prompt(e('Select or enter a grocery item to add:'), {
+      promptTextOnDone: (value) => `Grocery item: ${value}`,
+      // TODO: suggest items
+    })
+
+    // find item by name
+    let groceryItem = undefined
+    const searchResults = await GroceryItem.getSimilarByName(ctx.user._id, inputName)
+    if (searchResults.length === 1) {
+      groceryItem = searchResults[0]
+    } else if (searchResults.length > 1) {
+      // prompt for confirmation to select the correct item
+      let finalItemName = await ctx.prompt(e('Are you referring to one of the following items?'), {
+        reply_markup: {
+          inline_keyboard: [
+            ...searchResults.map((item) => ([{ text: item.name, callback_data: item.name }])),
+            [{ text: 'No, this is a new item', callback_data: inputName }],
+          ],
+        },
+      })
+      groceryItem = searchResults.find((item) => item.name === finalItemName)
+    }
+    if (!groceryItem) {
+      // item does not exist, prompt for unit and create new item
+      const unit = await ctx.prompt(e('Unit for this item:'), {
+        reply_markup: {
+          inline_keyboard: [
+            Object.values(GroceryItemUnit).splice(0, 5).map((unit) => ({ text: unit, callback_data: unit })),
+            Object.values(GroceryItemUnit).splice(5).map((unit) => ({ text: unit, callback_data: unit })),
+          ],
+        },
+        validator: (value) => Object.values(GroceryItemUnit).includes(value),
+        errorMsg: e('Please enter a valid unit.'),
+        promptTextOnDone: (value) => `Unit for this item: ${value}`,
+      })
+
+      groceryItem = await GroceryItem.create(ctx.user._id, inputName, unit)
+      await ctx.reply(e(`New grocery item ${groceryItem.name} created.`))
+    }
+
+    return groceryItem
+  }
+
   /**
    * Handle add grocery item command
    * @param {types.ContextWithUser} ctx - The context
    */
   async handleAddItemCmd(ctx) {
-    // Prompt for name
-    // TODO: give some name suggestions
-    // TODO: already in list
-    const name = await ctx.prompt(e('Select or enter a grocery item to add:'), {
-      promptTextOnDone: (value) => `Grocery item: ${value}`,
-    })
+    const groceryItem = await this.promptGroceryItem(ctx)
+    if (groceryItem.isPendingForPurchase()) {
+      await ctx.reply(e(`Grocery item ${groceryItem.name} already in list.`))
+      return
+    }
 
     // Prompt for quantity
     const quantity = await ctx.prompt(e('Quantity: (Enter number or skip)'), {
@@ -113,24 +157,7 @@ export default class TelegramCommanderApp extends TelegramCommander {
     })
     const quantityNum = quantity === '0' ? undefined : Number(quantity)
 
-    // Prompt for unit if quantity is specified
-    /** @type {GroceryItemUnit} */
-    let unit = undefined
-    if (quantityNum > 0) {
-      unit = await ctx.prompt(e('Unit:'), {
-        reply_markup: {
-          inline_keyboard: [
-            Object.values(GroceryItemUnit).splice(0, 5).map((unit) => ({ text: unit, callback_data: unit })),
-            Object.values(GroceryItemUnit).splice(5).map((unit) => ({ text: unit, callback_data: unit })),
-          ],
-        },
-        validator: (value) => Object.values(GroceryItemUnit).includes(value),
-        errorMsg: e('Please enter a valid unit.'),
-        promptTextOnDone: (value) => `Unit: ${value}`,
-      })
-    }
-
-    const groceryItem = await GroceryItem.addPendingPurchase(ctx.user._id, name, quantityNum, unit)
+    await groceryItem.setPendingPurchase(quantityNum)
     await ctx.reply(e(`Grocery item ${groceryItem.name} added.`))
   }
 
@@ -142,16 +169,9 @@ export default class TelegramCommanderApp extends TelegramCommander {
     const groceryItems = await GroceryItem.getAllWithPendingPurchase(ctx.user._id)
     const listMsg = groceryItems.map((item) => {
       let msg = `*${item.name}*`
-      if (item.pendingPurchase?.quantity) {
-        const quantity = item.pendingPurchase.quantity
-        const unit = item.pendingPurchase.unit
-        msg += e(` - ${quantity} ${unit}(s)`)
-      }
       if (item.purchases.length > 0) {
-        // TODO: handle multiple units
-        const totalPrice = item.purchases.reduce((acc, purchase) => acc + purchase.price, 0)
-        const avgPrice = totalPrice / item.purchases.length
-        msg += e(` (avg: $${avgPrice.toFixed(2)}/${item.purchases[0].unit})`)
+        const { avgPrice, denominator } = item.getPriceSummary()
+        msg += e(` (avg: $${avgPrice.toFixed(2)}/${denominator}${item.unit})`)
       }
       return msg
     }).join('\n')
@@ -163,35 +183,8 @@ export default class TelegramCommanderApp extends TelegramCommander {
    * @param {types.ContextWithUser} ctx - The context
    */
   async handleRecordPurchaseCmd(ctx) {
-    const pendingPurchaseItems = await GroceryItem.getAllWithPendingPurchase(ctx.user._id)
-    const itemName = await ctx.prompt(e('Select or enter a grocery item name:'), {
-      reply_markup: {
-        inline_keyboard: pendingPurchaseItems.map((item) => ([{ text: item.name, callback_data: item.name }])),
-      },
-      promptTextOnDone: (value) => `Grocery item: ${value}`,
-    })
-
-    // find item by name
-    let groceryItem = undefined
-    const searchResults = await GroceryItem.getSimilarByName(ctx.user._id, itemName)
-    if (searchResults.length === 1) {
-      groceryItem = searchResults[0]
-    } else if (searchResults.length > 1) {
-      // prompt for confirmation to select the correct item
-      let finalItemName = await ctx.prompt(e('Are you referring to one of the following items?'), {
-        reply_markup: {
-          inline_keyboard: [
-            ...searchResults.map((item) => ([{ text: item.name, callback_data: item.name }])),
-            [{ text: 'No, this is a new item', callback_data: itemName }],
-          ],
-        },
-      })
-      groceryItem = searchResults.find((item) => item.name === finalItemName)
-    }
-    if (!groceryItem) {
-      groceryItem = await GroceryItem.create(ctx.user._id, itemName)
-      await ctx.reply(e(`New grocery item ${groceryItem.name} created.`))
-    }
+    // const pendingPurchaseItems = await GroceryItem.getAllWithPendingPurchase(ctx.user._id)
+    const groceryItem = await this.promptGroceryItem(ctx)
 
     // prompt for quantity
     // TODO: check against pending purchase quantity
@@ -202,19 +195,6 @@ export default class TelegramCommanderApp extends TelegramCommander {
     })
     const quantityNum = Number(quantity)
 
-    // prompt for unit
-    const unit = await ctx.prompt(e('Select unit:'), {
-      reply_markup: {
-        inline_keyboard: [
-          Object.values(GroceryItemUnit).splice(0, 5).map((unit) => ({ text: unit, callback_data: unit })),
-          Object.values(GroceryItemUnit).splice(5).map((unit) => ({ text: unit, callback_data: unit })),
-        ],
-      },
-      validator: (value) => Object.values(GroceryItemUnit).includes(value),
-      errorMsg: 'Please enter a valid unit.',
-      promptTextOnDone: (value) => `Unit: ${value}`,
-    })
-
     // prompt for price
     const price = await ctx.prompt(e('Enter total price:'), {
       validator: (value) => !isNaN(Number(value)) && Number(value) >= 0,
@@ -223,9 +203,9 @@ export default class TelegramCommanderApp extends TelegramCommander {
     })
     const priceNum = Number(price)
     
-    await groceryItem.recordPurchase(quantityNum, unit, priceNum)
-    const unitPrice = priceNum / quantityNum
-    await ctx.reply(e(`Purchase of ${quantityNum} ${unit}(s) of ${groceryItem.name} at $${priceNum} ($${unitPrice.toFixed(2)}/${unit}) recorded.`))
+    await groceryItem.recordPurchase(quantityNum, priceNum)
+    const { avgPrice, denominator } = GroceryItem.calculateAvgPrice(priceNum, quantityNum, groceryItem.unit)
+    await ctx.reply(e(`Purchase of ${quantityNum} ${groceryItem.unit}(s) of ${groceryItem.name} at $${priceNum} ($${avgPrice.toFixed(2)}/${denominator}${groceryItem.unit}) recorded.`))
   }
 }
 

@@ -15,19 +15,34 @@ const GroceryItemUnit = {
   BOTTLE: 'bottle',
 }
 
+/**
+ * Denominator when averaging the price. E.g. If unit is 'g' and averageDenominator is 100, then its average price will be displayed as $x/100g.
+ * @type {Record<GroceryItemUnit, number>}
+ */
+const avgDenominatorByUnit = {
+  [GroceryItemUnit.KG]: 1,
+  [GroceryItemUnit.G]: 100,
+  [GroceryItemUnit.LB]: 1,
+  [GroceryItemUnit.ML]: 100,
+  [GroceryItemUnit.L]: 1,
+  [GroceryItemUnit.PIECE]: 1,
+  [GroceryItemUnit.PACK]: 1,
+  [GroceryItemUnit.CAN]: 1,
+  [GroceryItemUnit.BOTTLE]: 1,
+}
+
 const groceryItemSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
   name: { type: String, required: true },
+  unit: { type: String, enum: Object.values(GroceryItemUnit), required: true },
   pendingPurchase: {
     requestedAt: { type: Date },
     quantity: { type: Number },
-    unit: { type: String, enum: Object.values(GroceryItemUnit) },
   },
   purchases: [{
     purchasedAt: { type: Date },
     quantity: { type: Number },
     price: { type: Number },
-    unit: { type: String, enum: Object.values(GroceryItemUnit) },
   }],
   // TODO: average price, highest price, lowest price
 }, {
@@ -55,35 +70,15 @@ class GroceryItem extends mongoose.model('GroceryItem', groceryItemSchema) {
   }
 
   /**
-   * Add a pending purchase to a grocery item. Create a new grocery item if it doesn't exist.
-   * @param {mongoose.Types.ObjectId} userId - The ID of the user
-   * @param {string} name - The name of the grocery item
-   * @param {number} quantity - The quantity of the item requested
-   * @param {string} unit - The unit of the item requested
-   * @returns {Promise<GroceryItem>} - A promise that resolves to the grocery item
-   */
-  static async addPendingPurchase(userId, name, quantity = undefined, unit = undefined) {
-    let groceryItem = await this.findOne({ user: userId, name })
-    if (!groceryItem) {
-      groceryItem = await this.create(userId, name, { pendingPurchase: { quantity, unit } })
-    } else {
-      groceryItem.pendingPurchase = { quantity, unit, requestedAt: Date.now() }
-      await groceryItem.save()
-    }
-    return groceryItem
-  }
-
-  /**
    * Create a new grocery item
    * @param {mongoose.Types.ObjectId} userId - The ID of the user
    * @param {string} name - The name of the grocery item
    * @param {Object} opts - Options
    * @param {Object} opts.pendingPurchase - The pending purchase
    * @param {number} opts.pendingPurchase.quantity - The quantity of the item requested
-   * @param {string} opts.pendingPurchase.unit - The unit of the item requested
    * @returns {Promise<GroceryItem>} - A promise that resolves to the new grocery item
    */
-  static async create(userId, name, opts = {}) {
+  static async create(userId, name, unit, opts = {}) {
     const pendingPurchase = opts?.pendingPurchase
     if (pendingPurchase) {
       pendingPurchase.requestedAt = Date.now()
@@ -92,6 +87,7 @@ class GroceryItem extends mongoose.model('GroceryItem', groceryItemSchema) {
     const groceryItem = new GroceryItem({
       user: userId,
       name,
+      unit,
       pendingPurchase,
       purchases: [],
     })
@@ -112,19 +108,63 @@ class GroceryItem extends mongoose.model('GroceryItem', groceryItemSchema) {
   }
 
   /**
+   * Calculate the average price of a grocery item
+   * @param {number} price - The price of the item
+   * @param {number} quantity - The quantity of the item
+   * @param {string} unit - The unit of the item
+   * @returns {{avgPrice: number, denominator: number}} - The average price and denominator
+   */
+  static calculateAvgPrice(price, quantity, unit) {
+    const denominator = avgDenominatorByUnit[unit]
+    return {
+      avgPrice: quantity === 0 ? 0 : price / quantity * denominator,
+      denominator,
+    }
+  }
+
+  /**
+   * Set the pending purchase for a grocery item
+   * @param {number} quantity - The quantity of the item requested
+   */
+  async setPendingPurchase(quantity) {
+    this.pendingPurchase = { quantity, requestedAt: Date.now() }
+    await this.save()
+  }
+
+  /**
    * Record a purchase for a grocery item
    * @param {number} quantity - The quantity of the item purchased
-   * @param {string} unit - The unit of the item purchased
    * @param {number} price - The price of the item purchased
    */
-  async recordPurchase(quantity, unit, price) {
-    this.purchases.push({ quantity, unit, price, purchasedAt: Date.now() })
+  async recordPurchase(quantity, price) {
+    this.purchases.push({ quantity, price, purchasedAt: Date.now() })
     this.pendingPurchase = undefined
     await this.save()
+  }
+
+  /**
+   * Get the price summary of the grocery item
+   * @returns {{avgPrice: number, denominator: number}} - The price summary
+   */
+  getPriceSummary() {
+    const totalPrice = this.purchases.reduce((acc, purchase) => acc + purchase.price, 0)
+    const totalQuantity = this.purchases.reduce((acc, purchase) => acc + purchase.quantity, 0)
+    return {
+      ...GroceryItem.calculateAvgPrice(totalPrice, totalQuantity, this.unit),
+    }
+  }
+
+  /**
+   * Check if the grocery item is pending for purchase
+   * @returns {boolean} - Whether the grocery item is pending for purchase
+   */
+  isPendingForPurchase() {
+    return this.pendingPurchase?.requestedAt !== undefined
   }
 }
 
 export {
   GroceryItem,
   GroceryItemUnit,
+  avgDenominatorByUnit,
 }
