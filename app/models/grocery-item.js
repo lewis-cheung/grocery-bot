@@ -77,7 +77,7 @@ const groceryItemSchema = new mongoose.Schema({
 }, {
   timestamps: true,
 })
-groceryItemSchema.index({ name: 1, user: 1 }, { unique: true })
+groceryItemSchema.index({ user: 1, name: 1 }, { unique: true })
 
 class GroceryItem extends mongoose.model('GroceryItem', groceryItemSchema) {
 
