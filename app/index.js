@@ -92,11 +92,19 @@ export default class TelegramCommanderApp extends TelegramCommander {
     await this.sendMessage(this.notiChatIds, content)
   }
 
-  async promptGroceryItem(ctx) {
+  async promptGroceryItem(ctx, suggestedItems = []) {
     // prompt for name
+    const keyboardColumnSize = 2
+    const keyboardRows = []
+    for (let i = 0; i < suggestedItems.length; i += keyboardColumnSize) {
+        const chunk = suggestedItems.slice(i, i + keyboardColumnSize)
+        keyboardRows.push(chunk.map((item) => ({ text: item.name, callback_data: item.name })))
+    }
     const inputName = await ctx.prompt(e('Select or enter a grocery item to add:'), {
       promptTextOnDone: (value) => `Grocery item: ${value}`,
-      // TODO: suggest items
+      reply_markup: {
+        inline_keyboard: keyboardRows,
+      },
     })
 
     // find item by name
@@ -183,8 +191,8 @@ export default class TelegramCommanderApp extends TelegramCommander {
    * @param {types.ContextWithUser} ctx - The context
    */
   async handleRecordPurchaseCmd(ctx) {
-    // const pendingPurchaseItems = await GroceryItem.getAllWithPendingPurchase(ctx.user._id)
-    const groceryItem = await this.promptGroceryItem(ctx)
+    const pendingPurchaseItems = await GroceryItem.getAllWithPendingPurchase(ctx.user._id)
+    const groceryItem = await this.promptGroceryItem(ctx, pendingPurchaseItems)
 
     // prompt for quantity
     // TODO: check against pending purchase quantity
