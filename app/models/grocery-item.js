@@ -182,6 +182,14 @@ class GroceryItem extends mongoose.model('GroceryItem', groceryItemSchema) {
   }
 
   /**
+   * Unset the pending purchase for a grocery item
+   */
+  async unsetPendingPurchase() {
+    this.pendingPurchase = undefined
+    await this.save()
+  }
+
+  /**
    * Record a purchase for a grocery item
    * @param {number} quantity - The quantity of the item purchased
    * @param {number} price - The price of the item purchased

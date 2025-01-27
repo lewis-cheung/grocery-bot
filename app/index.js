@@ -38,6 +38,12 @@ export default class TelegramCommanderApp extends TelegramCommander {
     })
 
     await this.addCommand({
+      name: 'remove_item',
+      description: 'Remove grocery item from list',
+      handler: this.handleRemoveItemCmd.bind(this),
+    })
+
+    await this.addCommand({
       name: 'show_list',
       description: 'Show grocery list',
       handler: this.handleShowListCmd.bind(this),
@@ -174,6 +180,21 @@ export default class TelegramCommanderApp extends TelegramCommander {
 
     await groceryItem.setPendingPurchase(quantityNum)
     await ctx.reply(e(`Grocery item ${groceryItem.name} added.`))
+  }
+
+  /**
+   * Handle remove grocery item command
+   * @param {types.ContextWithUser} ctx - The context
+   */
+  async handleRemoveItemCmd(ctx) {
+    const pendingPurchaseItems = await GroceryItem.getAllWithPendingPurchase(ctx.user._id)
+    const groceryItem = await this.promptGroceryItem(ctx, pendingPurchaseItems)
+    if (!groceryItem.isPendingForPurchase()) {
+      await ctx.reply(e(`Grocery item ${groceryItem.name} is not in list.`))
+      return
+    }
+    await groceryItem.unsetPendingPurchase()
+    await ctx.reply(e(`Grocery item ${groceryItem.name} removed from list.`))
   }
 
   /**
