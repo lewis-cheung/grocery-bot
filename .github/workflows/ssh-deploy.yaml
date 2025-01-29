@@ -1,0 +1,77 @@
+name: SSH Deployment (NVM + PM2)
+
+on:
+  push:
+    tags:
+      - '*'  # Change this if you want to deploy on specific tags
+
+jobs:
+  check-secrets:
+    environment: production
+    runs-on: ubuntu-latest
+    outputs:
+      has-secrets: ${{ steps.check.outputs.has-secrets }}
+    steps:
+      - id: check
+        run: |
+          if [ -n "${{ secrets.HOST }}" ] && [ -n "${{ secrets.SSH_USERNAME }}" ] && [ -n "${{ secrets.SSH_PRIVATE_KEY }}" ] && [ -n "${{ vars.APP_PATH }}" ] && [ -n "${{ secrets.DEPLOY_KEY }}" ]; then
+            echo "has-secrets=true" >> $GITHUB_OUTPUT
+          else
+            echo "has-secrets=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Required secrets are not set"
+          fi
+
+  deploy:
+    environment: production
+    needs: check-secrets
+    runs-on: ubuntu-latest
+    if: needs.check-secrets.outputs.has-secrets == 'true'
+    steps:
+      - name: SSH and pull code
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # Add GitHub to known hosts
+            mkdir -p ~/.ssh
+            ssh-keyscan -H ${{ github.server_url }} >> ~/.ssh/known_hosts
+
+            # Setup deploy key
+            DEPLOY_KEY_PATH=~/.ssh/${{ github.repository_id }}-deploy-key
+            echo "${{ secrets.DEPLOY_KEY }}" > ${DEPLOY_KEY_PATH}
+            chmod 600 ${DEPLOY_KEY_PATH}
+
+            # Configure Git to use deploy key
+            eval "$(ssh-agent -s)"
+            ssh-add ${DEPLOY_KEY_PATH}
+
+            # Install NVM if it doesn't exist
+            if [ ! -d "${HOME}/.nvm/.git" ]; then
+              curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+            fi
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+
+            # Install Node.js (no effect if already installed)
+            nvm install ${{ vars.NODE_VERSION }} --save
+            nvm use ${{ vars.NODE_VERSION }}
+
+            # Install PM2 if it doesn't exist
+            if ! command -v pm2 &> /dev/null; then
+              npm install -g pm2
+            fi
+
+            # Clone the repository if it doesn't exist
+            if [ ! -d "${{ vars.APP_PATH }}" ] || [ -z "$(ls -A ${{ vars.APP_PATH }})" ]; then
+              git clone git@github.com:${{ github.repository }}.git ${{ vars.APP_PATH }}
+            fi
+
+            # Checkout the tag, install dependencies, and start the app
+            cd ${{ vars.APP_PATH }}
+            git fetch origin
+            git checkout ${{ github.ref_name }}
+            npm ci
+            npm run pm2:start
