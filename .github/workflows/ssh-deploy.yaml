@@ -3,7 +3,7 @@ name: SSH Deployment (NVM + PM2)
 on:
   push:
     tags:
-      - '*'  # Change this if you want to deploy on specific tags
+      - v*
 
 jobs:
   check-secrets:
