@@ -1,4 +1,4 @@
-import { TelegramCommander, escapeMarkdownV2 as e, Context } from 'telegram-commander'
+import { TelegramCommander, escapeMarkdownV2 as e } from 'telegram-commander'
 import mongoose from 'mongoose'
 
 import { User, GroceryItem, GroceryItemUnit, displayUnitByUnit } from './models/index.js'
@@ -100,7 +100,7 @@ export default class TelegramCommanderApp extends TelegramCommander {
 
   /**
    * 
-   * @param {Context} ctx
+   * @param {types.ContextWithUser} ctx
    * @param {GroceryItem[]} suggestedItems
    * @param {Object} [opts={}]
    * @param {string} [opts.isManualInputEnabled=true]
