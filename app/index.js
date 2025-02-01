@@ -1,4 +1,4 @@
-import { TelegramCommander, escapeMarkdownV2 as e } from 'telegram-commander'
+import { TelegramCommander, escapeMarkdownV2 as e, Context } from 'telegram-commander'
 import mongoose from 'mongoose'
 
 import { User, GroceryItem, GroceryItemUnit, displayUnitByUnit } from './models/index.js'
@@ -98,7 +98,18 @@ export default class TelegramCommanderApp extends TelegramCommander {
     await this.sendMessage(this.notiChatIds, content)
   }
 
-  async promptGroceryItem(ctx, suggestedItems = []) {
+  /**
+   * 
+   * @param {Context} ctx
+   * @param {GroceryItem[]} suggestedItems
+   * @param {Object} [opts={}]
+   * @param {string} [opts.isManualInputEnabled=true]
+   * @returns 
+   */
+  async promptGroceryItem(ctx, suggestedItems = [], opts = {}) {
+    // options
+    const { isManualInputEnabled = true } = opts
+
     // prompt for name
     const keyboardColumnSize = 2
     const suggestionRows = []
@@ -107,6 +118,7 @@ export default class TelegramCommanderApp extends TelegramCommander {
         suggestionRows.push(chunk.map((item) => ({ text: item.name, callback_data: item.name })))
     }
     const inputName = await ctx.prompt(e('Select or enter a grocery item:'), {
+      isManualInputEnabled,
       promptTextOnDone: (value) => `Grocery item: ${value}`,
       reply_markup: {
         inline_keyboard: suggestionRows,
@@ -188,7 +200,7 @@ export default class TelegramCommanderApp extends TelegramCommander {
    */
   async handleRemoveItemCmd(ctx) {
     const pendingPurchaseItems = await GroceryItem.getAllWithPendingPurchase(ctx.user._id)
-    const groceryItem = await this.promptGroceryItem(ctx, pendingPurchaseItems)
+    const groceryItem = await this.promptGroceryItem(ctx, pendingPurchaseItems, { isManualInputEnabled: false })
     if (!groceryItem.isPendingForPurchase()) {
       await ctx.reply(e(`Grocery item ${groceryItem.name} is not in list.`))
       return
