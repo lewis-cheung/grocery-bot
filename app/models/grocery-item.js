@@ -146,6 +146,15 @@ class GroceryItem extends mongoose.model('GroceryItem', groceryItemSchema) {
   }
 
   /**
+   * Get all grocery items of a user
+   * @param {mongoose.Types.ObjectId} userId 
+   * @returns {Promise<GroceryItem[]>} - A promise that resolves to an array of grocery items
+   */
+  static async getAll(userId) {
+    return this.find({ user: userId })
+  }
+
+  /**
    * Get all grocery items with a pending purchase
    * @param {mongoose.Types.ObjectId} userId - The ID of the user
    * @returns {Promise<GroceryItem[]>} - A promise that resolves to an array of grocery items

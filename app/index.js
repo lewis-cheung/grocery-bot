@@ -44,15 +44,21 @@ export default class TelegramCommanderApp extends TelegramCommander {
     })
 
     await this.addCommand({
+      name: 'record_purchase',
+      description: 'Record a purchase',
+      handler: this.handleRecordPurchaseCmd.bind(this),
+    })
+
+    await this.addCommand({
       name: 'show_list',
       description: 'Show grocery list',
       handler: this.handleShowListCmd.bind(this),
     })
 
     await this.addCommand({
-      name: 'record_purchase',
-      description: 'Record a purchase',
-      handler: this.handleRecordPurchaseCmd.bind(this),
+      name: 'list_all',
+      description: 'List all items',
+      handler: this.handleListAllItemsCmd.bind(this),
     })
 
     await this.syncCommands()
@@ -257,6 +263,25 @@ export default class TelegramCommanderApp extends TelegramCommander {
     await groceryItem.recordPurchase(quantityNum, priceNum)
     const { avgPrice, denominator } = GroceryItem.calculateAvgPrice(priceNum, quantityNum, groceryItem.unit)
     await ctx.reply(e(`Purchase of ${quantityNum} ${groceryItem.displayUnit} of ${groceryItem.name} at $${priceNum} ($${avgPrice.toFixed(2)}/${denominator}${groceryItem.displayUnit}) recorded.`))
+  }
+
+  /**
+    * Handle list all items command
+   * @param {types.ContextWithUser} ctx
+   */
+  async handleListAllItemsCmd(ctx) {
+    const allItems = await GroceryItem.getAll(ctx.user._id)
+    const msgs = allItems
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((item) => {
+        let msg = `*${e(item.name)}*`
+        if (item.purchases.length > 0) {
+          const { avgPrice, denominator } = item.getPriceSummary()
+          msg += e(` (avg: $${avgPrice.toFixed(2)}/${denominator}${item.displayUnit})`)
+        }
+        return msg
+      })
+    await ctx.reply([ e(`All items:`), ...msgs ])
   }
 }
 
