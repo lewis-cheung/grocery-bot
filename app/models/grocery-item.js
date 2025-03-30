@@ -63,6 +63,8 @@ const avgDenominatorByUnit = {
   [GroceryItemUnit.CAN]: 1,
   [GroceryItemUnit.BOTTLE]: 1,
   [GroceryItemUnit.USE]: 1,
+  [GroceryItemUnit.CM]: 1,
+  [GroceryItemUnit.M]: 1,
 }
 
 const groceryItemSchema = new mongoose.Schema({
