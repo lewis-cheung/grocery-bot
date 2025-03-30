@@ -160,8 +160,8 @@ export default class TelegramCommanderApp extends TelegramCommander {
       const unit = await ctx.prompt(e('Unit for this new item:'), {
         reply_markup: {
           inline_keyboard: [
-            Object.values(GroceryItemUnit).splice(0, 5).map((unit) => ({ text: displayUnitByUnit[unit], callback_data: unit })),
-            Object.values(GroceryItemUnit).splice(5).map((unit) => ({ text: displayUnitByUnit[unit], callback_data: unit })),
+            Object.values(GroceryItemUnit).splice(0, 6).map((unit) => ({ text: displayUnitByUnit[unit], callback_data: unit })),
+            Object.values(GroceryItemUnit).splice(6).map((unit) => ({ text: displayUnitByUnit[unit], callback_data: unit })),
           ],
         },
         validator: (value) => Object.values(GroceryItemUnit).includes(value),

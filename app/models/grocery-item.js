@@ -25,6 +25,8 @@ const GroceryItemUnit = {
   CAN: 'can',
   BOTTLE: 'bottle',
   USE: 'use',
+  CM: 'cm',
+  M: 'm',
 }
 
 /**
@@ -42,6 +44,8 @@ const displayUnitByUnit = {
   [GroceryItemUnit.CAN]: ' can(s)',
   [GroceryItemUnit.BOTTLE]: ' bottle(s)',
   [GroceryItemUnit.USE]: ' use(s)',
+  [GroceryItemUnit.CM]: 'cm',
+  [GroceryItemUnit.M]: 'm',
 }
 
 /**
